@@ -90,10 +90,10 @@ public class YourSolver implements Solver<Board> {
             int to_x = p.x();
             int to_y = invertVertical(p.y(), sizeY);
             System.out.printf("TO: x:%2d, y:%2d\n", to_x, to_y);
-            if (to_y < me.getY()) return Direction.DOWN;
-            if (to_y > me.getY()) return Direction.UP;
             if (to_x < me.getX()) return Direction.LEFT;
+            if (to_y > me.getY()) return Direction.UP;
             if (to_x > me.getX()) return Direction.RIGHT;
+            if (to_y < me.getY()) return Direction.DOWN;
         }
         return Direction.ACT;
     }
@@ -101,8 +101,9 @@ public class YourSolver implements Solver<Board> {
     private Point getClosestEnemy(Board board) {
         List<Point> enemies = board.getEnemies();
         Point me = board.getMe();
+        // TODO: HANDLE SPECIAL CASE WHEN THE ENEMY IS NEAR
         return enemies.stream()
-                .min(Comparator.comparing(p -> Math.round(p.distance(me))))
+                .min(Comparator.comparing(p -> Math.floor(p.distance(me))))
                 .get();
     }
 
