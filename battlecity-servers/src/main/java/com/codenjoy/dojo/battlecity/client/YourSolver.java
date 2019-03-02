@@ -22,11 +22,9 @@ package com.codenjoy.dojo.battlecity.client;
  * #L%
  */
 
-import com.codenjoy.dojo.services.Direction;
+import com.codenjoy.dojo.services.*;
 import com.codenjoy.dojo.client.Solver;
 import com.codenjoy.dojo.client.WebSocketRunner;
-import com.codenjoy.dojo.services.Dice;
-import com.codenjoy.dojo.services.RandomDice;
 
 /**
  * User: your name
@@ -35,6 +33,7 @@ public class YourSolver implements Solver<Board> {
 
     private Dice dice;
     private Board board;
+    private Direction currentDirection = Direction.RIGHT;
 
     public YourSolver(Dice dice) {
         this.dice = dice;
@@ -45,15 +44,48 @@ public class YourSolver implements Solver<Board> {
         this.board = board;
         if (board.isGameOver()) return "";
 
-        return Direction.ACT.toString();
+        String move = moveDir(board);
+
+        return move + ',' + Direction.ACT.toString();
     }
 
     public static void main(String[] args) {
         WebSocketRunner.runClient(
                 // paste here board page url from browser after registration
-                "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/eae1bel6klfsh5kb3veh?code=5257725287416123010",
+                "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/qfzvov5ud0q0drg8x3ug?code=5850506025977822212",
                 new YourSolver(new RandomDice()),
                 new Board());
     }
 
+    private String moveDir(Board board) {
+        int meX = board.getMe().getX();
+        int meY = board.getMe().getY();
+        Direction move = Direction.DOWN;
+
+        if (!isBarrierAhead(board)) {
+            move = currentDirection;
+        } else {
+            // find empty cell
+            if (!board.isBarrierAt(meX + 1, meY)) {
+                move = Direction.RIGHT;
+            } else if (!board.isBarrierAt(meX, meY + 1)) {
+                move = Direction.UP;
+            } else if (!board.isBarrierAt(meX - 1, meY)) {
+                move = Direction.LEFT;
+            } else if (!board.isBarrierAt(meX, meY - 1)) {
+                move = Direction.DOWN;
+            }
+        }
+
+        currentDirection = move;
+        return move.toString();
+    }
+
+    private boolean isBarrierAhead(Board board) {
+        int meX = board.getMe().getX();
+        int meY = board.getMe().getY();
+        Point point = new PointImpl(meX, meY);
+        Point potentialMove = currentDirection.change(point);
+        return board.isBarrierAt(potentialMove.getX(), potentialMove.getY());
+    }
 }
