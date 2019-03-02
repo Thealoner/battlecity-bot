@@ -5,14 +5,10 @@ import java.util.stream.*;
 
 public class BoardLee {
     private final List<PointLee> deltas = new ArrayList<PointLee>(){{
-//        add(new PointLee(-1,-1));
         add(new PointLee(0,-1));
-//        add(new PointLee(+1,-1));
         add(new PointLee(-1,0));
         add(new PointLee(+1,0));
-//        add(new PointLee(-1,+1));
         add(new PointLee(0,+1));
-//        add(new PointLee(+1,+1));
     }};
     private final static int OBSTACLE = -10;
     private final static int START = -1;
@@ -64,7 +60,7 @@ public class BoardLee {
     }
 
     boolean isOnBoard(PointLee p) {
-        return p.x()>= 0 && p.x() < dimX && p.y()>=0 && p.y()< dimY;
+        return p.x() >= 0 && p.x() < dimX && p.y() >= 0 && p.y() < dimY;
     }
 
     boolean isUnvisited(PointLee p) {
@@ -95,7 +91,7 @@ public class BoardLee {
         setObstacle(new PointLee(x, y));
     }
 
-    void setObstacle(PointLee p) {
+    public void setObstacle(PointLee p) {
         set(p, OBSTACLE);
     }
 
@@ -107,7 +103,10 @@ public class BoardLee {
         curr.add(start);
         while (!curr.isEmpty() && !found) {
             counter[0]++;
-            Set<PointLee> next = curr.stream().map(p -> neighborsUnvisited(p)).flatMap(Collection::stream).collect(Collectors.toSet());
+            Set<PointLee> next = curr.stream()
+                    .map(p -> neighborsUnvisited(p))
+                    .flatMap(Collection::stream)
+                    .collect(Collectors.toSet());
             next.forEach(p -> set(p, counter[0]));
             if (next.contains(finish)) {
                 found = true;

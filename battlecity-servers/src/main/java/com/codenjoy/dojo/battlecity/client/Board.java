@@ -54,6 +54,10 @@ public class Board extends AbstractBoard<Elements> {
         return getBarriers().contains(pt(x, y));
     }
 
+    public boolean isBarrierAt(Point p) {
+        return isBarrierAt(p.getX(), p.getY());
+    }
+
     public List<Point> getBarriers() {
         return get(Elements.BATTLE_WALL,
                 Elements.CONSTRUCTION,
@@ -115,8 +119,16 @@ public class Board extends AbstractBoard<Elements> {
         return super.getAt(x, y);
     }
 
+    public Elements getAt(Point p) {
+        return getAt(p.getX(), p.getY());
+    }
+
     public boolean isBulletAt(int x, int y) {
         return getAt(x, y).equals(Elements.BULLET);
+    }
+
+    public boolean isBulletAt(Point p) {
+        return isBulletAt(p.getX(), p.getY());
     }
 
     @Override
