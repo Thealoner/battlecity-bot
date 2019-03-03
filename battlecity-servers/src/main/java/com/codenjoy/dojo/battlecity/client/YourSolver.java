@@ -36,6 +36,8 @@ import java.util.*;
  */
 public class YourSolver implements Solver<Board> {
 
+    private final static String URL = "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/qfzvov5ud0q0drg8x3ug?code=5850506025977822212";
+
     private Dice dice;
     private Board board;
     private Direction currentDirection = Direction.RIGHT;
@@ -52,11 +54,11 @@ public class YourSolver implements Solver<Board> {
 //        PointLee dest = new PointLee(21,21);
         char[][] field = board.getField();
         int sizeY = field[0].length;
-        Point destPoint = getClosestEnemy(board);
+        Point destPoint = getClosestEnemy();
         PointLee dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
 
 
-        return getDirectionToDestination(board, dest).toString() + ',' + Direction.ACT.toString();
+        return getDirectionToDestination(dest).toString() + ',' + Direction.ACT.toString();
 //        String move = moveDir(board);
 //
 //        return move + ',' + Direction.ACT.toString();
@@ -65,12 +67,12 @@ public class YourSolver implements Solver<Board> {
     public static void main(String[] args) {
         WebSocketRunner.runClient(
                 // paste here board page url from browser after registration
-                "http://algoritmix.dan-it.kiev.ua/codenjoy-contest/board/player/qfzvov5ud0q0drg8x3ug?code=5850506025977822212",
+                URL,
                 new YourSolver(new RandomDice()),
                 new Board());
     }
     
-    private Direction getDirectionToDestination(Board board, PointLee dest) {
+    private Direction getDirectionToDestination(PointLee dest) {
         char[][] field = board.getField();
         int sizeX = field.length;
         int sizeY = field[0].length;
@@ -98,10 +100,9 @@ public class YourSolver implements Solver<Board> {
         return Direction.ACT;
     }
 
-    private Point getClosestEnemy(Board board) {
+    private Point getClosestEnemy() {
         List<Point> enemies = board.getEnemies();
         Point me = board.getMe();
-        // TODO: HANDLE SPECIAL CASE WHEN THE ENEMY IS NEAR
         return enemies.stream()
                 .min(Comparator.comparing(p -> Math.floor(p.distance(me))))
                 .get();
