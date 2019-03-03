@@ -44,6 +44,7 @@ public class YourSolver implements Solver<Board> {
     private Board board;
     private Board prevBoard;
     private int circuitBreaker = 0;
+    private int cooldown = 0;
     private final List<Point> bulletDeltas = new ArrayList<Point>(){{
         add(new PointImpl(0,-2));
         add(new PointImpl(-2,0));
@@ -98,6 +99,7 @@ public class YourSolver implements Solver<Board> {
         this.board = board;
         if (board.isGameOver()) return "";
         String shootAfter = "";
+        cooldown--;
 
         char[][] field = board.getField();
         int sizeY = field[0].length;
@@ -118,10 +120,11 @@ public class YourSolver implements Solver<Board> {
         double distanceToEnemy = me.distance(destPoint);
         System.out.println("ABS X: " + Math.abs(destPoint.getX() - me.getX()) + " | ABS Y: " + Math.abs(destPoint.getY() - me.getY()));
 
-        if (distanceToEnemy < 10 && (!sameLine(me, destPoint) || !lookingAt(me, destPoint, direction))) {
-            System.out.println("===DON'T SHOOT");
-        } else {
+        if (distanceToEnemy < 10 && (sameLine(me, destPoint) || lookingAt(me, destPoint, direction) || enemyIsNear(me))) {
             shootAfter = ',' + Direction.ACT.toString();
+            cooldown = 3;
+        } else {
+            System.out.println("===DON'T SHOOT");
         }
         /*
          *   ====END OF SHOOTING
@@ -137,13 +140,15 @@ public class YourSolver implements Solver<Board> {
                 System.out.println("===DANCING|STOP and SHOOT");
                 direction = Direction.STOP;
                 circuitBreaker++;
-                shootAfter = ',' + Direction.ACT.toString();
             } else {
                 circuitBreaker = 0;
             }
         } else if (Math.round(distanceToEnemy) == 1) {
             System.out.println("===DISTANCE==1");
-            direction = direction.clockwise();
+            List<Direction> safeDirections = getSafeDirections(me);
+            if (!safeDirections.isEmpty()) {
+                direction = safeDirections.get(0);
+            }
 //            direction = Direction.STOP;
 //            destPoint = getClosestEnemy(prevBoard);
 //            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
@@ -288,5 +293,16 @@ public class YourSolver implements Solver<Board> {
 
     private int invertVertical(int val, int dimY) {
         return dimY - val - 1;
+    }
+
+    private boolean enemyIsNear(Point p) {
+        List<Elements> near = board.getNear(p);
+        return near.stream()
+                .anyMatch(element ->
+                    element.equals(Elements.OTHER_TANK_UP) ||
+                    element.equals(Elements.OTHER_TANK_DOWN) ||
+                    element.equals(Elements.OTHER_TANK_LEFT) ||
+                    element.equals(Elements.OTHER_TANK_RIGHT)
+                );
     }
 }
