@@ -29,7 +29,9 @@ import com.codenjoy.dojo.services.*;
 import com.codenjoy.dojo.client.Solver;
 import com.codenjoy.dojo.client.WebSocketRunner;
 
+import javax.swing.text.html.Option;
 import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * User: your name
@@ -40,7 +42,17 @@ public class YourSolver implements Solver<Board> {
 
     private Dice dice;
     private Board board;
-    private Direction currentDirection = Direction.RIGHT;
+    private Board prevBoard;
+    private final List<Point> bulletDeltas = new ArrayList<Point>(){{
+        add(new PointImpl(0,-2));
+        add(new PointImpl(-2,0));
+        add(new PointImpl(+2,0));
+        add(new PointImpl(0,+2));
+        add(new PointImpl(0,-1));
+        add(new PointImpl(-1,0));
+        add(new PointImpl(+1,0));
+        add(new PointImpl(0,+1));
+    }};
 
     public YourSolver(Dice dice) {
         this.dice = dice;
@@ -50,18 +62,100 @@ public class YourSolver implements Solver<Board> {
     public String get(Board board) {
         this.board = board;
         if (board.isGameOver()) return "";
+        String shootAfter = "";
 
-//        PointLee dest = new PointLee(21,21);
         char[][] field = board.getField();
         int sizeY = field[0].length;
+
         Point destPoint = getClosestEnemy();
+        Point me = board.getMe();
+
         PointLee dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
 
+        Direction plannedDirection = getDirectionToDestination(dest);
+        Direction direction = plannedDirection;
+        Point nextPoint = me.copy();
+        nextPoint.change(plannedDirection);
+        List<Point> dangerBulletsNow = getDangerousBullets(me);
+        List<Point> dangerBulletsNext = getDangerousBullets(nextPoint);
+        List<Direction> directions = Direction.onlyDirections();
 
-        return getDirectionToDestination(dest).toString() + ',' + Direction.ACT.toString();
-//        String move = moveDir(board);
-//
-//        return move + ',' + Direction.ACT.toString();
+
+        if (!dangerBulletsNow.isEmpty()) {
+            System.out.println("Danger Now!");
+            Optional<Direction> safeDirection = directions.stream()
+                    .filter(dir -> {
+                        Point p = me.copy();
+                        p.change(dir);
+                        return !p.equals(dangerBulletsNow) && plannedDirection != dir && plannedDirection != dir.inverted() && !board.isBarrierAt(p);
+                    })
+                    .findFirst();
+            if (safeDirection.isPresent()) {
+                direction = safeDirection.get();
+            }
+        } else if (!dangerBulletsNext.isEmpty()) {
+            System.out.println("Danger Next!");
+            Optional<Direction> safeDirection = directions.stream()
+                    .filter(dir -> {
+                        Point p = me.copy();
+                        p.change(dir);
+                        return plannedDirection != dir && plannedDirection != dir.inverted() && !board.isBarrierAt(p);
+                    })
+                    .findFirst();
+            if (safeDirection.isPresent()) {
+                direction = safeDirection.get();
+            }
+        }
+
+
+        // if distance to enemy < 5 && not on the same line
+        // then don't shoot
+        double distanceToEnemy = me.distance(destPoint);
+
+        if (distanceToEnemy > 4 && distanceToEnemy < 7 || !sameLine(me, destPoint) || !lookingAt(me, destPoint)) {
+            // don't shoot
+        } else if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
+            // what until the enemy comes to the next cell
+            direction = Direction.STOP;
+        } else if (Math.round(distanceToEnemy) == 1) {
+            // when stuck, go to the prev enemy location and SHOOT!
+            direction = Direction.STOP;
+//            destPoint = getClosestEnemy(prevBoard);
+//            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
+//            direction = getDirectionToDestination(board, dest);
+            shootAfter = ',' + Direction.ACT.toString();
+        } else if (Math.abs(destPoint.getX() - me.getX()) == 1 || Math.abs(destPoint.getY() - me.getY()) == 1) {
+            // Doesn't seem to work
+            System.out.println("Getting in the same line with enemy.");
+            if (destPoint.getX() - me.getX() == 1) {
+                direction = Direction.RIGHT;
+            } if (destPoint.getX() - me.getX() == -1) {
+                direction = Direction.LEFT;
+            } if (destPoint.getY() - me.getY() == 1) {
+                direction = Direction.UP;
+            } if (destPoint.getX() - me.getX() == -1) {
+                direction = Direction.DOWN;
+            }
+            shootAfter = ',' + Direction.ACT.toString();
+        } else {
+            shootAfter = ',' + Direction.ACT.toString();
+        }
+
+        this.prevBoard = board;
+        return direction.toString() + shootAfter;
+    }
+
+    private boolean lookingAt(Point me, Point destPoint) {
+        if (board.getAt(me).equals(Elements.TANK_UP) && me.getY() < destPoint.getY()) return true;
+        if (board.getAt(me).equals(Elements.TANK_DOWN) && me.getY() > destPoint.getY()) return true;
+        if (board.getAt(me).equals(Elements.TANK_RIGHT) && me.getX() < destPoint.getX()) return true;
+        if (board.getAt(me).equals(Elements.TANK_LEFT) && me.getX() > destPoint.getX()) return true;
+
+        return false;
+    }
+
+    private boolean sameLine(Point me, Point destPoint) {
+        return me.getX() == destPoint.getX() || me.getY() == destPoint.getY();
     }
 
     public static void main(String[] args) {
@@ -79,8 +173,8 @@ public class YourSolver implements Solver<Board> {
         BoardLee boardLee = new BoardLee(sizeX, sizeY);
         List<Point> barriers = board.getBarriers();
 //        List<Point> enemies = board.getEnemies();
-        barriers.forEach(p -> boardLee.setObstacle(p.getX(), invertVertical(p.getY(), sizeY)));
-//        enemies.forEach(p -> boardLee.setObstacle(p.getX(), invertVertical(p.getY(), sizeY)));
+        barriers.forEach(p -> boardLee.setObstacle(new PointLee(p.getX(), invertVertical(p.getY(), sizeY))));
+//        enemies.forEach(p -> boardLee.setObstacle(new PointLee(p.getX(), invertVertical(p.getY(), sizeY))));
         Point me = board.getMe();
         PointLee src = new PointLee(me.getX(), invertVertical(me.getY(), sizeY));
         Optional<List<PointLee>> solution = boardLee.trace(src, dest);
@@ -108,89 +202,18 @@ public class YourSolver implements Solver<Board> {
                 .get();
     }
 
+    private List<Point> getDangerousBullets(Point p) {
+        return bulletDeltas.stream()
+                .filter(delta -> {
+                    Point bulletPoint = p.copy();
+                    bulletPoint.change(delta);
+                    if (this.board.isBulletAt(bulletPoint)) System.out.println("Danger! " + bulletPoint);
+                    return this.board.isBulletAt(bulletPoint);
+                })
+                .collect(Collectors.toList());
+    }
+
     private int invertVertical(int val, int dimY) {
         return dimY - val - 1;
-    }
-
-    private String moveDir(Board board) {
-        Direction move;
-
-        if (enemyNeighbourDirection(board) != null) {
-            move = Direction.ACT;
-        } else {
-            if (!isBarrierAhead(board)) {
-                move = currentDirection;
-            } else {
-                move = findAvailableDirection(board);
-            }
-        }
-
-        currentDirection = move;
-        return move.toString();
-    }
-
-    private boolean isBarrierAhead(Board board) {
-        Point point = getCurrentMePoint(board);
-        Point potentialMove = currentDirection.change(point);
-        return board.isBarrierAt(potentialMove.getX(), potentialMove.getY());
-    }
-
-    private Direction findAvailableDirection(Board board) {
-        Point point = getCurrentMePoint(board);
-        Direction randomDirection = Direction.UP;
-
-        for (int i = 0; i < 100; i++) {
-            randomDirection = Direction.random();
-            Point potentialMove = randomDirection.change(point);
-
-            if (!board.isBarrierAt(potentialMove.getX(), potentialMove.getY())) {
-                return randomDirection;
-            }
-        }
-
-        // default
-        return randomDirection;
-    }
-
-    private Direction enemyNeighbourDirection(Board board) {
-        Point point = getCurrentMePoint(board);
-        int x = point.getX();
-        int y = point.getY();
-
-        Direction direction = null;
-        List<Elements> neighbourCells = board.getNear(point);
-
-        List<Elements> enemies = new ArrayList<Elements>(
-            Arrays.asList(
-                Elements.AI_TANK_UP,
-                Elements.AI_TANK_DOWN,
-                Elements.AI_TANK_LEFT,
-                Elements.AI_TANK_RIGHT,
-                Elements.OTHER_TANK_UP,
-                Elements.OTHER_TANK_DOWN,
-                Elements.OTHER_TANK_LEFT,
-                Elements.OTHER_TANK_RIGHT
-            )
-        );
-
-        enemies.forEach(enemy -> {
-            if (board.isAt(x, y, enemy))
-            return;
-        });
-
-
-        return direction;
-    }
-
-    private Point nearbyEnemyLocation() {
-        int range = 5;
-        Point point = PointImpl.pt(0, 0);
-        return point;
-    }
-
-    private Point getCurrentMePoint(Board board) {
-        int meX = board.getMe().getX();
-        int meY = board.getMe().getY();
-        return PointImpl.pt(meX, meY);
     }
 }
