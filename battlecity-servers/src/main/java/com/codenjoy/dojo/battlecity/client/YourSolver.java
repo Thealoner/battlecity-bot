@@ -53,6 +53,40 @@ public class YourSolver implements Solver<Board> {
         add(new PointImpl(+1,0));
         add(new PointImpl(0,+1));
     }};
+    private final Map<Direction, List<Point>> bulletDeltasMap = new HashMap<Direction, List<Point>>(){{
+        put(Direction.UP, new ArrayList<Point>(){{
+           add(new PointImpl(0, 1));
+           add(new PointImpl(0, 2));
+           add(new PointImpl(-2, 1));
+           add(new PointImpl(-1, 1));
+           add(new PointImpl(1, 1));
+           add(new PointImpl(2, 1));
+        }});
+        put(Direction.RIGHT, new ArrayList<Point>(){{
+            add(new PointImpl(1, 0));
+            add(new PointImpl(2, 0));
+            add(new PointImpl(1, -2));
+            add(new PointImpl(1, -1));
+            add(new PointImpl(1, 1));
+            add(new PointImpl(1, 2));
+        }});
+        put(Direction.DOWN, new ArrayList<Point>(){{
+            add(new PointImpl(0, -1));
+            add(new PointImpl(0, -2));
+            add(new PointImpl(-2, -1));
+            add(new PointImpl(-1, -1));
+            add(new PointImpl(1, -1));
+            add(new PointImpl(2, -1));
+        }});
+        put(Direction.LEFT, new ArrayList<Point>(){{
+            add(new PointImpl(-1, 0));
+            add(new PointImpl(-2, 0));
+            add(new PointImpl(-1, -2));
+            add(new PointImpl(-1, -1));
+            add(new PointImpl(-1, 1));
+            add(new PointImpl(-1, 2));
+        }});
+    }};
 
     public YourSolver(Dice dice) {
         this.dice = dice;
@@ -66,34 +100,30 @@ public class YourSolver implements Solver<Board> {
 
         char[][] field = board.getField();
         int sizeY = field[0].length;
+        List<Direction> directions = Direction.onlyDirections();
 
         Point destPoint = getClosestEnemy();
         Point me = board.getMe();
-
         PointLee dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
-
         Direction plannedDirection = getDirectionToDestination(dest);
         Direction direction = plannedDirection;
         Point nextPoint = me.copy();
         nextPoint.change(plannedDirection);
-        List<Point> dangerBulletsNow = getDangerousBullets(me);
-        List<Point> dangerBulletsNext = getDangerousBullets(nextPoint);
-        List<Direction> directions = Direction.onlyDirections();
 
+        List<Point> dangerBulletsNow = getDangerousBullets(me);
 
         if (!dangerBulletsNow.isEmpty()) {
             System.out.println("Danger Now!");
-            Optional<Direction> safeDirection = directions.stream()
-                    .filter(dir -> {
-                        Point p = me.copy();
-                        p.change(dir);
-                        return !p.equals(dangerBulletsNow) && plannedDirection != dir && plannedDirection != dir.inverted() && !board.isBarrierAt(p);
-                    })
-                    .findFirst();
-            if (safeDirection.isPresent()) {
-                direction = safeDirection.get();
+            List<Direction> safeDirections = getSafeDirections(me);
+            if (!safeDirections.isEmpty()) {
+                direction = safeDirections.get(0);
+                nextPoint.change(direction);
             }
-        } else if (!dangerBulletsNext.isEmpty()) {
+        }
+
+        List<Point> dangerBulletsNext = getDangerousBullets(nextPoint);
+
+        if (!dangerBulletsNext.isEmpty()) {
             System.out.println("Danger Next!");
             Optional<Direction> safeDirection = directions.stream()
                     .filter(dir -> {
@@ -107,26 +137,31 @@ public class YourSolver implements Solver<Board> {
             }
         }
 
-
-        // if distance to enemy < 5 && not on the same line
-        // then don't shoot
         double distanceToEnemy = me.distance(destPoint);
+        System.out.println("ABS X: " + Math.abs(destPoint.getX() - me.getX()) + " | ABS Y: " + Math.abs(destPoint.getY() - me.getY()));
 
-        if (distanceToEnemy > 4 && distanceToEnemy < 7 || !sameLine(me, destPoint) || !lookingAt(me, destPoint)) {
-            // don't shoot
-        } else if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
+        if (distanceToEnemy > 6 && distanceToEnemy < 8 || !sameLine(me, destPoint) || !lookingAt(me, destPoint, direction)) {
+            System.out.println("===DON'T SHOOT");
+        } else {
+            shootAfter = ',' + Direction.ACT.toString();
+        }
+
+
+        if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
             // what until the enemy comes to the next cell
+            System.out.println("===DANCING|STOP and SHOOT");
             direction = Direction.STOP;
+            shootAfter = ',' + Direction.ACT.toString();
         } else if (Math.round(distanceToEnemy) == 1) {
             // when stuck, go to the prev enemy location and SHOOT!
-            direction = Direction.STOP;
+            System.out.println("===DISTANCE==1");
+//            direction = Direction.STOP;
 //            destPoint = getClosestEnemy(prevBoard);
 //            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
 //            direction = getDirectionToDestination(board, dest);
-            shootAfter = ',' + Direction.ACT.toString();
         } else if (Math.abs(destPoint.getX() - me.getX()) == 1 || Math.abs(destPoint.getY() - me.getY()) == 1) {
             // Doesn't seem to work
-            System.out.println("Getting in the same line with enemy.");
+            System.out.println("===Getting in the same line with enemy.");
             if (destPoint.getX() - me.getX() == 1) {
                 direction = Direction.RIGHT;
             } if (destPoint.getX() - me.getX() == -1) {
@@ -136,20 +171,17 @@ public class YourSolver implements Solver<Board> {
             } if (destPoint.getX() - me.getX() == -1) {
                 direction = Direction.DOWN;
             }
-            shootAfter = ',' + Direction.ACT.toString();
-        } else {
-            shootAfter = ',' + Direction.ACT.toString();
         }
 
         this.prevBoard = board;
         return direction.toString() + shootAfter;
     }
 
-    private boolean lookingAt(Point me, Point destPoint) {
-        if (board.getAt(me).equals(Elements.TANK_UP) && me.getY() < destPoint.getY()) return true;
-        if (board.getAt(me).equals(Elements.TANK_DOWN) && me.getY() > destPoint.getY()) return true;
-        if (board.getAt(me).equals(Elements.TANK_RIGHT) && me.getX() < destPoint.getX()) return true;
-        if (board.getAt(me).equals(Elements.TANK_LEFT) && me.getX() > destPoint.getX()) return true;
+    private boolean lookingAt(Point me, Point destPoint, Direction direction) {
+        if ((board.getAt(me).equals(Elements.TANK_UP) || direction == Direction.UP) && me.getY() < destPoint.getY()) return true;
+        if ((board.getAt(me).equals(Elements.TANK_DOWN) || direction == Direction.DOWN) && me.getY() > destPoint.getY()) return true;
+        if ((board.getAt(me).equals(Elements.TANK_RIGHT) || direction == Direction.RIGHT) && me.getX() < destPoint.getX()) return true;
+        if ((board.getAt(me).equals(Elements.TANK_LEFT) || direction == Direction.LEFT) && me.getX() > destPoint.getX()) return true;
 
         return false;
     }
@@ -207,9 +239,23 @@ public class YourSolver implements Solver<Board> {
                 .filter(delta -> {
                     Point bulletPoint = p.copy();
                     bulletPoint.change(delta);
-                    if (this.board.isBulletAt(bulletPoint)) System.out.println("Danger! " + bulletPoint);
-                    return this.board.isBulletAt(bulletPoint);
+                    if (board.isBulletAt(bulletPoint)) System.out.println("Danger! " + bulletPoint);
+                    return board.isBulletAt(bulletPoint);
                 })
+                .collect(Collectors.toList());
+    }
+
+    private List<Direction> getSafeDirections(Point p) {
+        return bulletDeltasMap.entrySet().stream()
+                .filter(points -> points.getValue().stream()
+                        .allMatch(delta -> {
+                            Point bulletPoint = p.copy();
+                            bulletPoint.change(delta);
+                            if (board.isBulletAt(bulletPoint)) System.out.println("Danger! " + bulletPoint);
+                            return !board.isBulletAt(bulletPoint) && !board.isBarrierAt(bulletPoint);
+                        })
+                )
+                .map(Map.Entry::getKey)
                 .collect(Collectors.toList());
     }
 
