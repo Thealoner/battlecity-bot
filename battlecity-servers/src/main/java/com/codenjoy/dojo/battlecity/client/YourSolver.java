@@ -143,17 +143,17 @@ public class YourSolver implements Solver<Board> {
 //            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
 //            direction = getDirectionToDestination(board, dest);
         } else if (Math.abs(destPoint.getX() - me.getX()) == 1 || Math.abs(destPoint.getY() - me.getY()) == 1) {
-            // Doesn't seem to work
-            System.out.println("===Getting in the same line with enemy.");
-            if (destPoint.getX() - me.getX() == 1) {
-                direction = Direction.RIGHT;
-            } if (destPoint.getX() - me.getX() == -1) {
-                direction = Direction.LEFT;
-            } if (destPoint.getY() - me.getY() == 1) {
-                direction = Direction.UP;
-            } if (destPoint.getX() - me.getX() == -1) {
-                direction = Direction.DOWN;
-            }
+                // DOESN'T GET WALLS INTO ACCOUNT
+//            System.out.println("===Getting in the same line with enemy.");
+//            if (destPoint.getX() - me.getX() == 1) {
+//                direction = Direction.RIGHT;
+//            } if (destPoint.getX() - me.getX() == -1) {
+//                direction = Direction.LEFT;
+//            } if (destPoint.getY() - me.getY() == 1) {
+//                direction = Direction.UP;
+//            } if (destPoint.getX() - me.getX() == -1) {
+//                direction = Direction.DOWN;
+//            }
         }
         /*
          *   ===END OF TACTICS
@@ -169,6 +169,7 @@ public class YourSolver implements Solver<Board> {
             List<Direction> safeDirections = getSafeDirections(me);
             if (!safeDirections.isEmpty()) {
                 direction = safeDirections.get(0);
+                System.out.println("===SAFE DIR: " + direction);
                 nextPoint.change(direction);
             }
         }
@@ -186,6 +187,7 @@ public class YourSolver implements Solver<Board> {
                     .findFirst();
             if (safeDirection.isPresent()) {
                 direction = safeDirection.get();
+                System.out.println("===SAFE DIR(NEXT): " + direction);
             }
         }
         /*
@@ -237,9 +239,9 @@ public class YourSolver implements Solver<Board> {
             int to_x = p.x();
             int to_y = invertVertical(p.y(), sizeY);
             System.out.printf("TO: x:%2d, y:%2d\n", to_x, to_y);
+            if (to_x > me.getX()) return Direction.RIGHT;
             if (to_x < me.getX()) return Direction.LEFT;
             if (to_y > me.getY()) return Direction.UP;
-            if (to_x > me.getX()) return Direction.RIGHT;
             if (to_y < me.getY()) return Direction.DOWN;
         }
         return Direction.ACT;
