@@ -140,7 +140,7 @@ public class YourSolver implements Solver<Board> {
         double distanceToEnemy = me.distance(destPoint);
         System.out.println("ABS X: " + Math.abs(destPoint.getX() - me.getX()) + " | ABS Y: " + Math.abs(destPoint.getY() - me.getY()));
 
-        if (distanceToEnemy > 6 && distanceToEnemy < 8 || !sameLine(me, destPoint) || !lookingAt(me, destPoint, direction)) {
+        if (distanceToEnemy < 10 && (!sameLine(me, destPoint) || !lookingAt(me, destPoint, direction))) {
             System.out.println("===DON'T SHOOT");
         } else {
             shootAfter = ',' + Direction.ACT.toString();
