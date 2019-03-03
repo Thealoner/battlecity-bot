@@ -40,11 +40,16 @@ public class YourSolver implements Solver<Board> {
 
     private Dice dice;
     private Board board;
+    private Board prevBoard;
     private final List<Point> bulletDeltas = new ArrayList<Point>(){{
         add(new PointImpl(0,-2));
         add(new PointImpl(-2,0));
         add(new PointImpl(+2,0));
         add(new PointImpl(0,+2));
+        add(new PointImpl(0,-1));
+        add(new PointImpl(-1,0));
+        add(new PointImpl(+1,0));
+        add(new PointImpl(0,+1));
     }};
 
     public YourSolver(Dice dice) {
@@ -57,8 +62,6 @@ public class YourSolver implements Solver<Board> {
         if (board.isGameOver()) return "";
         String shootAfter = "";
 
-
-//        PointLee dest = new PointLee(21,21);
         char[][] field = board.getField();
         int sizeY = field[0].length;
         Point destPoint = getClosestEnemy(board);
@@ -81,7 +84,7 @@ public class YourSolver implements Solver<Board> {
                     .filter(dir -> {
                         Point p = me.copy();
                         p.change(dir);
-                        return !p.equals(dangerBulletsNow) && plannedDirection != dir && !board.isBarrierAt(p);
+                        return !p.equals(dangerBulletsNow) && plannedDirection != dir && plannedDirection != dir.inverted() && !board.isBarrierAt(p);
                     })
                     .findFirst();
             if (safeDirection.isPresent()) {
@@ -93,7 +96,7 @@ public class YourSolver implements Solver<Board> {
                     .filter(dir -> {
                         Point p = me.copy();
                         p.change(dir);
-                        return plannedDirection != dir && !board.isBarrierAt(p);
+                        return plannedDirection != dir && plannedDirection != dir.inverted() && !board.isBarrierAt(p);
                     })
                     .findFirst();
             if (safeDirection.isPresent()) {
@@ -106,23 +109,37 @@ public class YourSolver implements Solver<Board> {
         // then don't shoot
         double distanceToEnemy = me.distance(destPoint);
 
-        if (distanceToEnemy > 4 && distanceToEnemy < 10 || !sameLine(me, destPoint) || !lookingAt(me, destPoint)) {
+        if (distanceToEnemy > 4 && distanceToEnemy < 7 || !sameLine(me, destPoint) || !lookingAt(me, destPoint)) {
             // don't shoot
         } else if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
             // what until the enemy comes to the next cell
             direction = Direction.STOP;
         } else if (Math.round(distanceToEnemy) == 1) {
-            // look at the enemy and SHOOT!
-//            direction = Direction.STOP;
+            // when stuck, go to the prev enemy location and SHOOT!
+            direction = Direction.STOP;
+//            destPoint = getClosestEnemy(prevBoard);
+//            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
+//            direction = getDirectionToDestination(board, dest);
+            shootAfter = ',' + Direction.ACT.toString();
+        } else if (Math.abs(destPoint.getX() - me.getX()) == 1 || Math.abs(destPoint.getY() - me.getY()) == 1) {
+            // Doesn't seem to work
+            System.out.println("Getting in the same line with enemy.");
+            if (destPoint.getX() - me.getX() == 1) {
+                direction = Direction.RIGHT;
+            } if (destPoint.getX() - me.getX() == -1) {
+                direction = Direction.LEFT;
+            } if (destPoint.getY() - me.getY() == 1) {
+                direction = Direction.UP;
+            } if (destPoint.getX() - me.getX() == -1) {
+                direction = Direction.DOWN;
+            }
             shootAfter = ',' + Direction.ACT.toString();
         } else {
             shootAfter = ',' + Direction.ACT.toString();
         }
 
+        this.prevBoard = board;
         return direction.toString() + shootAfter;
-//        String move = moveDir(board);
-//
-//        return move + ',' + Direction.ACT.toString();
     }
 
     private boolean lookingAt(Point me, Point destPoint) {
