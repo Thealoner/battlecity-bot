@@ -43,6 +43,7 @@ public class YourSolver implements Solver<Board> {
     private Dice dice;
     private Board board;
     private Board prevBoard;
+    private int circuitBreaker = 0;
     private final List<Point> bulletDeltas = new ArrayList<Point>(){{
         add(new PointImpl(0,-2));
         add(new PointImpl(-2,0));
@@ -132,12 +133,17 @@ public class YourSolver implements Solver<Board> {
          */
         if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
             // what until the enemy comes to the next cell
-            System.out.println("===DANCING|STOP and SHOOT");
-            direction = Direction.STOP;
-            shootAfter = ',' + Direction.ACT.toString();
+            if (circuitBreaker < 5) {
+                System.out.println("===DANCING|STOP and SHOOT");
+                direction = Direction.STOP;
+                circuitBreaker++;
+                shootAfter = ',' + Direction.ACT.toString();
+            } else {
+                circuitBreaker = 0;
+            }
         } else if (Math.round(distanceToEnemy) == 1) {
-            // when stuck, go to the prev enemy location and SHOOT!
             System.out.println("===DISTANCE==1");
+            direction = direction.clockwise();
 //            direction = Direction.STOP;
 //            destPoint = getClosestEnemy(prevBoard);
 //            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
