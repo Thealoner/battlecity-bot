@@ -110,6 +110,58 @@ public class YourSolver implements Solver<Board> {
         Point nextPoint = me.copy();
         nextPoint.change(plannedDirection);
 
+
+        /*
+         *   SHOOTING
+         */
+        double distanceToEnemy = me.distance(destPoint);
+        System.out.println("ABS X: " + Math.abs(destPoint.getX() - me.getX()) + " | ABS Y: " + Math.abs(destPoint.getY() - me.getY()));
+
+        if (distanceToEnemy < 10 && (!sameLine(me, destPoint) || !lookingAt(me, destPoint, direction))) {
+            System.out.println("===DON'T SHOOT");
+        } else {
+            shootAfter = ',' + Direction.ACT.toString();
+        }
+        /*
+         *   ====END OF SHOOTING
+         */
+
+
+        /*
+         *   TACTICS
+         */
+        if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
+            // what until the enemy comes to the next cell
+            System.out.println("===DANCING|STOP and SHOOT");
+            direction = Direction.STOP;
+            shootAfter = ',' + Direction.ACT.toString();
+        } else if (Math.round(distanceToEnemy) == 1) {
+            // when stuck, go to the prev enemy location and SHOOT!
+            System.out.println("===DISTANCE==1");
+//            direction = Direction.STOP;
+//            destPoint = getClosestEnemy(prevBoard);
+//            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
+//            direction = getDirectionToDestination(board, dest);
+        } else if (Math.abs(destPoint.getX() - me.getX()) == 1 || Math.abs(destPoint.getY() - me.getY()) == 1) {
+            // Doesn't seem to work
+            System.out.println("===Getting in the same line with enemy.");
+            if (destPoint.getX() - me.getX() == 1) {
+                direction = Direction.RIGHT;
+            } if (destPoint.getX() - me.getX() == -1) {
+                direction = Direction.LEFT;
+            } if (destPoint.getY() - me.getY() == 1) {
+                direction = Direction.UP;
+            } if (destPoint.getX() - me.getX() == -1) {
+                direction = Direction.DOWN;
+            }
+        }
+        /*
+         *   ===END OF TACTICS
+         */
+
+        /*
+         *   EVASION
+         */
         List<Point> dangerBulletsNow = getDangerousBullets(me);
 
         if (!dangerBulletsNow.isEmpty()) {
@@ -136,42 +188,9 @@ public class YourSolver implements Solver<Board> {
                 direction = safeDirection.get();
             }
         }
-
-        double distanceToEnemy = me.distance(destPoint);
-        System.out.println("ABS X: " + Math.abs(destPoint.getX() - me.getX()) + " | ABS Y: " + Math.abs(destPoint.getY() - me.getY()));
-
-        if (distanceToEnemy < 10 && (!sameLine(me, destPoint) || !lookingAt(me, destPoint, direction))) {
-            System.out.println("===DON'T SHOOT");
-        } else {
-            shootAfter = ',' + Direction.ACT.toString();
-        }
-
-
-        if (Math.abs(destPoint.getX() - me.getX()) == 1 && Math.abs(destPoint.getY() - me.getY()) == 1) {
-            // what until the enemy comes to the next cell
-            System.out.println("===DANCING|STOP and SHOOT");
-            direction = Direction.STOP;
-            shootAfter = ',' + Direction.ACT.toString();
-        } else if (Math.round(distanceToEnemy) == 1) {
-            // when stuck, go to the prev enemy location and SHOOT!
-            System.out.println("===DISTANCE==1");
-//            direction = Direction.STOP;
-//            destPoint = getClosestEnemy(prevBoard);
-//            dest = new PointLee(destPoint.getX(), invertVertical(destPoint.getY(), sizeY));
-//            direction = getDirectionToDestination(board, dest);
-        } else if (Math.abs(destPoint.getX() - me.getX()) == 1 || Math.abs(destPoint.getY() - me.getY()) == 1) {
-            // Doesn't seem to work
-            System.out.println("===Getting in the same line with enemy.");
-            if (destPoint.getX() - me.getX() == 1) {
-                direction = Direction.RIGHT;
-            } if (destPoint.getX() - me.getX() == -1) {
-                direction = Direction.LEFT;
-            } if (destPoint.getY() - me.getY() == 1) {
-                direction = Direction.UP;
-            } if (destPoint.getX() - me.getX() == -1) {
-                direction = Direction.DOWN;
-            }
-        }
+        /*
+         *   ===END OF EVASION
+         */
 
         this.prevBoard = board;
         return direction.toString() + shootAfter;
